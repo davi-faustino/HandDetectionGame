@@ -1,0 +1,44 @@
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rotateVideo {
+  /* -webkit-transform: scaleX(-1); */
+  /* transform: scaleX(-1); */
+}
+
+.hudText {
+  font-weight: bold;
+  font-family: Arial, Helvetica, sans-serif;
+  position: absolute;
+  font-size: 30px;
+  color: #ff00ff;
+}
+
+/* NÃO FUMEGA NADA PRA BAIXO!! */
+svg g path {
+  fill: green;
+}
+
+
+#myCar {
+  filter: invert(7%) sepia(100%) saturate(7439%) hue-rotate(248deg) brightness(108%) contrast(143%);
+}
+
+.grayCar {
+  filter: invert(56%) sepia(0%) saturate(1504%) hue-rotate(157deg) brightness(90%) contrast(83%);
+}
+
+.greenCar {
+  filter: invert(26%) sepia(99%) saturate(1390%) hue-rotate(97deg) brightness(96%) contrast(103%);
+}
+
+.redCar {
+  filter: invert(13%) sepia(100%) saturate(7484%) hue-rotate(9deg) brightness(90%) contrast(157%);
+}

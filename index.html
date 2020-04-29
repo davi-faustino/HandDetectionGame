@@ -1,0 +1,257 @@
+<html lang="pt-BR">
+<head>
+  <title>Hands</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1.0, user-scalable=no">
+  <script src="./assets/lib/tensorflow/tfjs-core.js"></script>
+  <script src="./assets/lib/tensorflow/tfjs-converter.js"></script>
+  <script src="./assets/lib/tensorflow/handpose.js"></script>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+  <style>
+    #video {
+      visibility: hidden;
+      width: auto;
+      height: auto;
+      position: absolute;
+    }
+  </style>
+  <link rel="stylesheet" href="./assets/css/index.css">
+</head>
+<body>
+  <div class="row">
+    <div class="col">
+      <div id="canvas-wrapper">
+        <video class="rotateVideo" id="video" muted autoplay></video>
+        <canvas class="rotateVideo" id="output"></canvas>
+      </div>
+    </div>
+    <div class="col">
+      <div class="gameDiv">
+        <canvas id="canvasGame" style="border: 1px solid red;"></canvas>
+      </div>
+    </div>
+  </div>
+  <!-- <script src="./assets/js/index.js"></script> -->
+  <script src="./assets/js/hexFilter.js"></script>
+  <script src="./assets/js/cam.js"></script>
+  <script src="./assets/js/dashed.js"></script>
+  <script src="./assets/js/carsEnemy.js"></script>
+  <!-- <script src="./assets/js/game.js"></script> -->
+
+  <script>
+    const canvasVideo = document.getElementById('output'),
+          canvasGame = document.getElementById('canvasGame'),
+          canvasGameCtx = canvasGame.getContext('2d');
+
+    var playerCarSelected = {
+          x: 0,
+          y: 415,
+          width: 53,
+          height: 51,
+          color: ''
+        },
+        carsSelect,
+        indexFingerPosition = [],
+        handCenterPosition = [],
+        canvasGameCenterX = 0,
+        canvasGameCenterY = 0,
+        time = 0,
+        score = 0,
+        actualGameState = null,
+        gameState = {
+          play: 0,
+          playing: 1,
+          lose: 2
+        };
+
+    const img = new Image(), handPointer = new Image(), mousePointer = new Image();
+    img.src = "assets/sprites/car.svg";
+    handPointer.src = "assets/sprites/hand-pointer.svg";
+    mousePointer.src = "assets/sprites/mouse-pointer.svg";
+
+    const canvasGameConfig = () => {
+      canvasGame.width = canvasVideo.width;
+      canvasGame.height = canvasVideo.height;
+      canvasGameCenterX = canvasGame.width / 2
+      canvasGameCenterY = canvasGame.height / 2
+      canvasGameCtx.font = '18pt Arial';
+      canvasGameCtx.textAlign = "center";
+      canvasGameCtx.translate(canvasGame.width,0);
+      canvasGameCtx.scale(-1, 1);
+    }
+
+    const configCars = () => {
+      carsSelect = [{
+          x: 100,
+          y: canvasGameCenterY,
+          width: 53,
+          height: 51,
+          color: '#0000FF'
+        },
+        {
+          x: 500,
+          y: canvasGameCenterY,
+          width: 53,
+          height: 51,
+          color: '#00FF00'
+        }
+      ]
+    }
+    
+
+    const drawMenu = () => {
+      canvasGameCtx.save();
+        textPositionY = 140;
+
+        drawBush();
+        drawAsphalt();
+        drawText('Escolha um carro para COMEÇAR!', canvasGameCenterX, textPositionY);
+        carsOptions();
+
+      canvasGameCtx.restore();
+    }
+
+    const drawLevel1 = () => {
+      canvasGameCtx.save();
+
+        drawBush();
+        drawAsphalt();
+        dashed.draw();
+        drawText(`Score: ${score}`, 60, 30);
+        drawText(`Time: ${time}`, 550, 30);
+
+      canvasGameCtx.restore();
+    }
+
+    const drawLoseScreen = () => {
+      canvasGameCtx.save();
+        drawBush();
+        drawAsphalt();
+        drawText('Você perdeu!', canvasGameCenterX, 140);
+        drawText('Score: ' + score, canvasGameCenterX, 170);
+        drawText('Time: ' + time, canvasGameCenterX, 195);
+
+        drawText('Aguarde...', canvasGameCenterX, 250)
+
+      canvasGameCtx.restore();
+    }
+
+    const drawBush = () => {
+      canvasGameCtx.fillStyle = 'green';
+      canvasGameCtx.fillRect(0, 0, canvasGame.width, canvasGame.height)
+    }
+
+    const drawAsphalt = () => {
+      canvasGameCtx.fillStyle = 'black';
+      canvasGameCtx.fillRect(50, 0, canvasGame.width - 100, canvasGame.height);
+    }
+
+    const drawText = (text, positionX, positionY) => {
+      canvasGameCtx.save();
+
+        canvasGameCtx.translate(canvasGame.width,0);
+        canvasGameCtx.scale(-1, 1);
+        canvasGameCtx.fillStyle = '#fff'
+        canvasGameCtx.fillText(text, positionX, positionY);
+        
+      canvasGameCtx.restore();
+    }
+
+    const drawCar = (car) => {
+      canvasGameCtx.filter = car.color;
+      canvasGameCtx.drawImage(img, car.x, car.y);
+      canvasGameCtx.filter = "none";
+    }
+
+    const drawCursor = () => {
+      canvasGameCtx.filter = 'none';
+      canvasGameCtx.drawImage(handPointer, indexFingerPosition.x, indexFingerPosition.y);
+    }
+
+
+
+
+    //LOGIC GAME
+    verifyGameState = () => {
+      canvasGameCtx.clearRect(0, 0, canvasGameCtx.width, canvasGameCtx.height);
+
+      if(actualGameState === gameState.play){
+        drawMenu();
+        drawCursor();
+        playerCarSelect();
+      }else if(actualGameState === gameState.playing){
+        drawLevel1();
+        drawCar(playerCarSelected);
+        carEnemies.draw();
+        movePlayerCar();
+      }else if(actualGameState === gameState.lose){
+        drawLoseScreen();
+        reloadGame();
+      }
+
+      requestAnimationFrame(verifyGameState);
+    }
+
+    const carsOptions = () => {
+      carsSelect.forEach(async (car, index) => {
+        if(car.color.search('#') != -1){
+          car.color = await convertColor(car.color);
+        }
+        drawCar(car);
+      });
+    }
+
+    const playerCarSelect = () => {
+      carsSelect.forEach((car, index) => {
+        if(indexFingerPosition.y >= car.y &&
+          indexFingerPosition.y <= car.y + car.height &&
+          indexFingerPosition.x >= car.x &&
+          indexFingerPosition.x <= car.x + car.height) {
+            playerCarSelected.x = canvasGameCenterX;
+            playerCarSelected.y = 415;
+            playerCarSelected.color = car.color;
+            actualGameState = gameState.playing;
+        }
+      });
+    }
+
+    const movePlayerCar = () => {
+      playerCarSelected.x = handCenterPosition.x;
+    }
+
+    const reloadGame = () => {
+      setTimeout(() => {
+        score = 0;
+        time = 0;
+        indexFingerPosition = [];
+        handCenterPosition = [];
+        dashed.clean();
+        carEnemies.clean();
+        actualGameState = gameState.play;
+      }, 2500);
+    }
+
+    const verifyColision = (colisor, car) =>
+      car.x < colisor.x + colisor.width &&
+      car.x + car.width > colisor.x &&
+      car.y < colisor.y + colisor.height &&
+      car.y + car.height > colisor.y
+      ? true
+      : false;
+
+    setInterval(() => {
+      if(actualGameState === gameState.playing){
+        time++;
+      }
+    }, 1000);
+
+    window.onload = async function(){
+      await startHandVideo.main();
+      await canvasGameConfig();
+      await configCars();
+      actualGameState = gameState.play;
+      verifyGameState();
+
+    }
+  </script>
+</body>
