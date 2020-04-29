@@ -1,5 +1,5 @@
 ports:
   - port: 3000
-    onOpen: open-preview
+    onOpen: open-browser
 tasks:
-  - command: npx start
+  - command: npx serve
